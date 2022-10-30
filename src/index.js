@@ -1,10 +1,13 @@
 import './css/styles.css';
 import NewAPIService from './JS/new-service';
 import axios from "axios";
+import Notiflix from 'notiflix';
 
 const BASE_URL = 'https://pixabay.com/api/' ;
 const KEY = 'key=30951910-62deaf9663a2ad8fd5a993571';
 const options = 'image_type=photo&orientation=horizontal&horizontal=true';
+const perPage = 40;
+let value = '';
 let page = 1;
 
 const searchFormEL = document.querySelector('.search-form');
@@ -14,25 +17,57 @@ const loadMore = document.querySelector('.load-more');
 searchFormEL.addEventListener('submit', onSearchPhoto);
 loadMore.addEventListener('click', onloadMore);
 
-const newAPIService = new NewAPIService();
 
 function onSearchPhoto(event) {
   event.preventDefault();
   galleryEL.innerHTML = '';
-  const value = event.currentTarget.elements.searchQuery.value;
-  axios.get(`${BASE_URL}?${KEY}&${options}&q=${value}&page=${page}&per_page=40`)
-    .then(res => {
-      console.log(res.data.hits);
-     const marcap = res.data.hits.map(info => 
+  page = 1;
+    value = event.currentTarget.elements.searchQuery.value;
+    get();
+
+};
+
+function onloadMore() {
+  loadMore.classList.add('visually-hidden');
+  console.log(loadMore);
+  page = page + 1;
+  get();
+  return page
+  }
+
+async function get() {
+ await axios.get(`${BASE_URL}?${KEY}&${options}&q=${value}&page=${page}&per_page=${perPage}`)
+   .then(res => {
+     
+     if (res.data.hits.length === 0) {
+       Notiflix.Notify.failure("Sorry, there are no images matching your search query. Please try again.");
+       return
+     }
+
+     marcap(res);
+
+   })
+   .catch(() => {
+      Notiflix.Notify.failure("We're sorry, but you've reached the end of search results.");
+       loadMore.classList.add('visually-hidden');
+   });
+ 
+};
+
+function marcap(object) {
+  const marcap = object.data.hits.map(info => 
           `<div class="photo-card">
             <img src="${info.webformatURL}" alt="${info.tags}" loading="lazy" />
             <div class="info">
+            <div>
               <p class="info-item">
                 <b>Likes</b> ${info.likes}
               </p>
               <p class="info-item">
                <b>Views</b> ${info.views}
               </p>
+            </div>
+            <div>
               <p class="info-item">
                 <b>Comments</b> ${info.comments}
               </p>
@@ -41,20 +76,11 @@ function onSearchPhoto(event) {
               </p>
             </div>
             </div>
+            </div>
           
-        `).join('');
+        `).join('')
       galleryEL.insertAdjacentHTML('beforeend', marcap);
-      console.log(galleryEL);
-  });
-  loadMore.classList.remove('visually-hidden');
-  console.log(loadMore);  
-  onloadMore();
- 
-
-};
-
-function onloadMore(){
-  page = page + 1;
-  return page
-  }
-
+        console.log(galleryEL);
+      loadMore.classList.remove('visually-hidden');
+        console.log(loadMore);  
+}
